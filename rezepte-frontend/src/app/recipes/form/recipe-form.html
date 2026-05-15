@@ -1,0 +1,455 @@
+<div class="space-y-4 pb-4">
+  <h2 class="text-center text-base font-bold text-ink py-2 border-b border-divider">
+    {{ isEditMode() ? 'Rezept bearbeiten' : 'Rezept erstellen' }}
+  </h2>
+
+  @if (!isEditMode()) {
+    <div class="card-soft p-4 space-y-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl bg-accent-softer flex items-center justify-center shrink-0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a57c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+            <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-semibold text-ink text-sm">Rezept automatisch erkennen</p>
+          <p class="text-xs text-ink-muted">Foto oder URL — KI füllt das Formular.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="btn-ghost cursor-pointer flex items-center justify-center gap-2 text-sm" style="padding: 0.75rem 1rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+          Aus Foto
+          <input autocomplete="off" type="file" accept="image/jpeg,image/png,image/webp" (change)="onAiImageSelected($event)" class="hidden" [disabled]="aiBusy() !== null" />
+        </label>
+        <button type="button" (click)="openUrlModal()" [disabled]="aiBusy() !== null" class="btn-ghost flex items-center justify-center gap-2 text-sm" style="padding: 0.75rem 1rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          Aus URL
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="space-y-3">
+    @if (imageUrl(); as url) {
+      <div class="relative rounded-3xl overflow-hidden">
+        <img loading="lazy" decoding="async" [src]="url" alt="Vorschau" class="w-full h-64 object-cover" />
+        <button
+          type="button"
+          (click)="removeImage()"
+          class="absolute top-3 right-3 w-10 h-10 rounded-full bg-card/95 flex items-center justify-center text-ink-soft hover:text-danger transition-colors"
+          aria-label="Bild entfernen"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    } @else {
+      <label class="block rounded-3xl border-2 border-dashed border-divider h-64 flex flex-col items-center justify-center cursor-pointer transition-colors hover:border-accent hover:bg-accent-softer">
+        @if (isUploading()) {
+          <svg class="animate-spin text-accent" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        } @else {
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        }
+        <input autocomplete="off" type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)" class="hidden" [disabled]="isUploading()" />
+      </label>
+    }
+
+    <div class="flex items-center gap-3">
+      <label class="px-4 py-2 rounded-full bg-accent-softer text-accent font-semibold text-sm cursor-pointer transition-colors hover:bg-accent-soft">
+        Datei auswählen
+        <input autocomplete="off" type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)" class="hidden" [disabled]="isUploading()" />
+      </label>
+      <span class="text-sm text-ink-muted">{{ imagePath() ? 'Datei ausgewählt' : 'Keine ausgewählt' }}</span>
+    </div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submitForm()" class="space-y-4">
+    <div class="card-soft p-6 space-y-5">
+      <div class="space-y-1">
+        <label class="section-label">Name <span class="text-danger">*</span></label>
+        <input
+          type="text"
+          formControlName="title"
+          placeholder="z.B. Pfannkuchen"
+          class="input-underline text-lg"
+          [class.border-red-400]="isInvalid('title')"
+        />
+        @if (isInvalid('title')) {
+          <p class="text-xs text-danger mt-1">Name ist ein Pflichtfeld.</p>
+        }
+      </div>
+
+      <div class="space-y-1">
+        <label class="section-label">Beschreibung</label>
+        <textarea
+          formControlName="description"
+          rows="3"
+          placeholder="Kurze Beschreibung (optional)"
+          class="input-underline resize-none"
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="section-label">Dauer (Min) <span class="text-danger">*</span></label>
+          <input
+            type="number"
+            min="1"
+            formControlName="durationMinutes"
+            placeholder="30"
+            class="input-underline text-lg"
+          />
+        </div>
+        <div class="space-y-1">
+          <label class="section-label">Portionen <span class="text-danger">*</span></label>
+          <input
+            type="number"
+            min="1"
+            formControlName="servings"
+            placeholder="2"
+            class="input-underline text-lg"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="section-label">Schwierigkeit</label>
+        <div class="flex flex-wrap gap-2">
+          @for (d of difficulties; track d.value) {
+            <button
+              type="button"
+              (click)="setDifficulty(d.value)"
+              class="pill"
+              [class.pill-active]="form.controls.difficulty.value === d.value"
+              [class.pill-inactive]="form.controls.difficulty.value !== d.value"
+            >
+              {{ d.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <label class="section-label">Bewertung (0-5)</label>
+        <div class="flex items-center gap-1">
+          @for (filled of ratingStars(); track $index) {
+            <button type="button" (click)="setRating($index + 1)" class="p-1" [attr.aria-label]="'Bewertung ' + ($index + 1)">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" [attr.style]="filled ? 'color: #c9a57c' : 'color: #e6ebf1'">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </button>
+          }
+          @if (form.controls.rating.value !== null) {
+            <button type="button" (click)="setRating(0)" class="ml-2 text-xs text-ink-muted hover:text-ink-soft">zurücksetzen</button>
+          }
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <div class="flex items-center justify-between">
+          <label class="section-label">Kalorien (kcal/Portion)</label>
+          <button
+            type="button"
+            (click)="estimateCalories()"
+            [disabled]="aiBusy() !== null"
+            class="btn-link text-xs flex items-center gap-1"
+          >
+            @if (aiBusy() === 'calories') {
+              <svg class="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Schätze...
+            } @else {
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              KI-Schätzung
+            }
+          </button>
+        </div>
+        <input
+          type="number"
+          min="0"
+          formControlName="caloriesPerServing"
+          placeholder="z.B. 450"
+          class="input-underline text-lg"
+        />
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="section-label text-xs">Eiweiß (g)</label>
+          <input type="number" min="0" step="0.1" formControlName="proteinPerServing" placeholder="0" class="input-underline" />
+        </div>
+        <div>
+          <label class="section-label text-xs">Kohlenh. (g)</label>
+          <input type="number" min="0" step="0.1" formControlName="carbsPerServing" placeholder="0" class="input-underline" />
+        </div>
+        <div>
+          <label class="section-label text-xs">Fett (g)</label>
+          <input type="number" min="0" step="0.1" formControlName="fatPerServing" placeholder="0" class="input-underline" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card-soft p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="section-label">Kategorien</label>
+        <button type="button" (click)="suggestTags()" class="text-xs text-accent">Vorschläge</button>
+      </div>
+      @if (tags().length > 0) {
+        <div class="flex flex-wrap gap-2">
+          @for (tag of tags(); track tag) {
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-softer text-accent font-medium text-sm">
+              @if (autoTags().has(tag)) {
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Automatisch erkannt"><path d="M12 2 L14 8 L20 8 L15 12 L17 18 L12 14 L7 18 L9 12 L4 8 L10 8 Z"/></svg>
+              }
+              {{ tag }}
+              <button type="button" (click)="removeTag(tag)" aria-label="Entfernen" class="ml-1 -mr-1 hover:text-ink">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </span>
+          }
+        </div>
+      }
+      <input
+        type="text"
+        [value]="tagInput()"
+        (input)="onTagInput($event)"
+        (keydown)="onTagKeydown($event)"
+        (blur)="commitTag()"
+        placeholder="Eigenes Tag hinzufügen (Enter)"
+        class="input-underline text-sm" />
+      <p class="text-xs text-ink-muted">Tipp: Stern = automatisch erkannt. Tags lassen sich entfernen.</p>
+    </div>
+
+    <div class="card-soft p-6 space-y-3">
+      <label class="flex items-center justify-between gap-3 cursor-pointer">
+        <div>
+          <p class="section-label mb-1">Privat</p>
+          <p class="text-xs text-ink-muted">Wenn aktiv, sehen dich folgende Personen dieses Rezept nicht.</p>
+        </div>
+        <input autocomplete="off" type="checkbox" formControlName="isPrivate" class="w-5 h-5 accent-accent shrink-0" />
+      </label>
+    </div>
+
+    <div class="card-soft p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="section-label">Zutaten</label>
+        <span class="text-xs text-ink-muted">{{ ingredients.length }}</span>
+      </div>
+      <div class="space-y-4" formArrayName="ingredients">
+        @for (group of ingredientsControls(); track group) {
+          <div [formGroupName]="$index" class="space-y-2 pb-3 border-b border-divider last:border-0 last:pb-0">
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                formControlName="name"
+                placeholder="Zutat (z.B. Spaghetti)"
+                class="input-underline flex-1 text-base"
+                [class.border-red-400]="isIngredientNameInvalid($index)"
+              />
+              <button
+                type="button"
+                (click)="removeIngredient($index)"
+                class="icon-btn-mini danger shrink-0"
+                aria-label="Zutat entfernen"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="flex-1">
+                <input
+                  type="text"
+                  formControlName="amount"
+                  placeholder="Menge"
+                  class="input-underline text-sm"
+                />
+              </div>
+              <div class="flex-1">
+                <select
+                  formControlName="unit"
+                  class="input-underline text-sm cursor-pointer"
+                >
+                  <option [ngValue]="null">— keine —</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                  <option value="ml">ml</option>
+                  <option value="l">l</option>
+                  <option value="EL">EL</option>
+                  <option value="TL">TL</option>
+                  <option value="Stk">Stk</option>
+                  <option value="Prise">Prise</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="addIngredient()"
+        class="w-full py-3 rounded-2xl border border-dashed border-accent/40 text-accent font-semibold text-sm transition-colors hover:bg-accent-softer"
+      >
+        + Zutat hinzufügen
+      </button>
+    </div>
+
+    <div class="card-soft p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="section-label">Zubereitung</label>
+        <span class="text-xs text-ink-muted">{{ steps.length }} Schritt(e)</span>
+      </div>
+      <div class="space-y-3" formArrayName="steps">
+        @for (group of stepsControls(); track group) {
+          <div [formGroupName]="$index" class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-accent-softer text-accent flex items-center justify-center font-bold text-sm shrink-0 mt-1">
+              {{ $index + 1 }}
+            </div>
+            <textarea
+              formControlName="text"
+              rows="4"
+              placeholder="Schritt beschreiben..."
+              class="flex-1 px-3 py-2 rounded-xl bg-page text-sm text-ink placeholder:text-ink-faint resize-none outline-none focus:ring-2 focus:ring-accent/40"
+              [class.ring-2]="isStepTextInvalid($index)"
+              [style.--tw-ring-color]="isStepTextInvalid($index) ? 'rgb(239, 68, 68)' : ''"
+            ></textarea>
+            <div class="flex flex-col gap-0.5 shrink-0 mt-1">
+              <button type="button" (click)="moveStepUp($index)" [disabled]="$index === 0" class="icon-btn-mini disabled:opacity-30 disabled:cursor-not-allowed" style="width: 1.75rem; height: 1.75rem;" aria-label="Nach oben">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </button>
+              <button type="button" (click)="moveStepDown($index)" [disabled]="$index === steps.length - 1" class="icon-btn-mini disabled:opacity-30 disabled:cursor-not-allowed" style="width: 1.75rem; height: 1.75rem;" aria-label="Nach unten">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <button type="button" (click)="removeStep($index)" class="icon-btn-mini danger" style="width: 1.75rem; height: 1.75rem;" aria-label="Schritt entfernen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="addStep()"
+        class="w-full py-3 rounded-2xl border border-dashed border-accent/40 text-accent font-semibold text-sm transition-colors hover:bg-accent-softer"
+      >
+        + Schritt hinzufügen
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="floating-action-pill">
+  <button type="button" (click)="cancel()" class="pill-icon-only" aria-label="Abbrechen" title="Abbrechen">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  </button>
+  <span class="pill-divider"></span>
+  <button type="button" (click)="submitForm()" [disabled]="isLoading()" class="pill-primary">
+    @if (isLoading()) {
+      <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    } @else {
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    }
+    Speichern
+  </button>
+</div>
+
+@if (urlModalOpen()) {
+  <div class="modal-backdrop" (click)="closeUrlModal()">
+    <div class="modal-sheet space-y-4" (click)="$event.stopPropagation()">
+      <div>
+        <h3 class="text-lg font-bold text-ink">Rezept aus URL importieren</h3>
+        <p class="text-sm text-ink-muted mt-1">Link zu einem Rezept einfügen — die KI extrahiert es automatisch.</p>
+      </div>
+      <div class="space-y-1">
+        <label class="section-label">URL</label>
+        <input
+          type="url"
+          [value]="urlInput()"
+          (input)="onUrlInput($event)"
+          placeholder="https://www.chefkoch.de/..."
+          class="input-underline text-base"
+          [disabled]="aiBusy() === 'url'"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          inputmode="url"
+          autofocus
+        />
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" (click)="closeUrlModal()" [disabled]="aiBusy() === 'url'" class="btn-ghost flex-1">Abbrechen</button>
+        <button type="button" (click)="submitUrl()" [disabled]="aiBusy() === 'url' || !urlInput().trim()" class="btn-primary flex-1">
+          @if (aiBusy() === 'url') {
+            <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            Lädt...
+          } @else {
+            Importieren
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (aiBusy() === 'image' || aiBusy() === 'url') {
+  <div class="modal-backdrop modal-backdrop--center">
+    <div class="modal-sheet modal-sheet--center text-center space-y-4">
+      <div class="flex justify-center">
+        <svg class="animate-spin text-accent" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      </div>
+      <div>
+        <p class="font-bold text-ink">
+          @if (aiBusy() === 'image') { Foto wird hochgeladen… }
+          @else { URL wird verarbeitet… }
+        </p>
+        <p class="text-sm text-ink-muted mt-2">
+          @if (aiBusy() === 'image') {
+            Die KI-Analyse läuft danach im Hintergrund.
+          } @else {
+            Strukturierte Seiten sind sofort fertig, andere brauchen ein paar Minuten.
+          }
+        </p>
+      </div>
+    </div>
+  </div>
+}

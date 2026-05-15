@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.angular/
+.env
+*.log
+uploads/*
+!uploads/.gitkeep
+.DS_Store
+.vscode/
+.idea/

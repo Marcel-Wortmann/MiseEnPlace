@@ -1,0 +1,127 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rezepte-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rezepte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rezepte}
+      POSTGRES_DB: ${POSTGRES_DB:-rezepte}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rezepte} -d ${POSTGRES_DB:-rezepte}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - rezepte-net
+
+  bls-init:
+    image: alpine:3.20
+    container_name: rezepte-bls-init
+    # Lädt die BLS-Excel von blsdb.de wenn sie noch nicht in /data liegt.
+    # Lizenz CC BY 4.0 — Quelle: Max Rubner-Institut (2025).
+    # URL kann via .env überschrieben werden, falls Token erneuert werden muss.
+    environment:
+      BLS_DOWNLOAD_URL: ${BLS_DOWNLOAD_URL:-https://blsdb.de/assets/uploads/BLS_4_0_2025_DE.zip}
+      BLS_TARGET_FILE: BLS_4_0_Daten_2025_DE.xlsx
+    volumes:
+      - ./data:/data
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        TARGET="/data/$$BLS_TARGET_FILE"
+        # Skip nur wenn Datei plausibel groß ist — die echte BLS-xlsx ist ~14 MB,
+        # die Components-Doku-xlsx ist ~22 KB. Schwelle 5 MB filtert Müll zuverlässig.
+        if [ -f "$$TARGET" ]; then
+          SIZE=$$(stat -c%s "$$TARGET")
+          if [ "$$SIZE" -gt 5000000 ]; then
+            echo "[bls-init] $$BLS_TARGET_FILE bereits vorhanden ($${SIZE} bytes) — überspringe Download."
+            exit 0
+          else
+            echo "[bls-init] $$BLS_TARGET_FILE existiert aber ist nur $${SIZE} bytes — Re-Download."
+            rm -f "$$TARGET"
+          fi
+        fi
+        echo "[bls-init] Lade BLS-Daten von $$BLS_DOWNLOAD_URL …"
+        apk add --no-cache curl unzip >/dev/null
+        cd /tmp
+        curl -fsSL --retry 3 --retry-delay 5 -o bls.zip "$$BLS_DOWNLOAD_URL"
+        echo "[bls-init] ZIP geladen, entpacke …"
+        unzip -o bls.zip -d bls-extract
+        # Die richtige Datei heißt "BLS_4_0_Daten_*.xlsx" (~14 MB).
+        # Im selben Archiv liegt eine "BLS_4_0_Components_*.xlsx" (~22 KB) — die wäre falsch.
+        FOUND=$$(find bls-extract -name "BLS_4_0_Daten*.xlsx" | head -1)
+        if [ -z "$$FOUND" ]; then
+          echo "[bls-init] FEHLER: Keine BLS_4_0_Daten*.xlsx in ZIP gefunden."
+          ls -la bls-extract
+          exit 1
+        fi
+        cp "$$FOUND" "$$TARGET"
+        FINAL_SIZE=$$(stat -c%s "$$TARGET")
+        if [ "$$FINAL_SIZE" -lt 5000000 ]; then
+          echo "[bls-init] FEHLER: Heruntergeladene Datei nur $${FINAL_SIZE} bytes — sieht falsch aus."
+          rm -f "$$TARGET"
+          exit 1
+        fi
+        echo "[bls-init] BLS-Daten installiert: $$TARGET ($${FINAL_SIZE} bytes)"
+        echo "[bls-init] Lizenz: CC BY 4.0 — Max Rubner-Institut (2025)"
+        rm -rf bls.zip bls-extract
+    networks:
+      - rezepte-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: rezepte-rest-api/Dockerfile
+    container_name: rezepte-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      bls-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rezepte}:${POSTGRES_PASSWORD:-rezepte}@db:5432/${POSTGRES_DB:-rezepte}?schema=public
+      PORT: 3000
+      NODE_ENV: production
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-ministral-3:14b}
+      OLLAMA_TEXT_MODEL: ${OLLAMA_TEXT_MODEL:-ministral-3:14b}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_TO_SOMETHING_RANDOM_AND_LONG}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - uploads-data:/app/uploads
+      - ./data:/app/data:ro
+    networks:
+      - rezepte-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: rezepte-frontend/Dockerfile
+    container_name: rezepte-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+    networks:
+      - rezepte-net
+
+volumes:
+  db-data:
+  uploads-data:
+
+networks:
+  rezepte-net:
+    driver: bridge

@@ -1,0 +1,274 @@
+<div class="space-y-4 pb-4">
+  @if (user(); as u) {
+    <div class="card-soft p-6 space-y-4">
+      <div>
+        <p class="section-label">Konto</p>
+        <p class="text-ink mt-1">{{ u.email }}</p>
+      </div>
+
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="space-y-3 pt-2 border-t border-divider">
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Benutzername</label>
+          <input type="text" formControlName="username" placeholder="Eindeutig, optional" class="input-underline" />
+          <p class="text-xs text-ink-muted">Damit andere dich finden können. Nur a-z, 0-9, _ und -.</p>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Anzeigename</label>
+          <input type="text" formControlName="displayName" placeholder="Optional" class="input-underline" />
+        </div>
+        <button type="submit" [disabled]="profileBusy()" class="btn-primary w-full">
+          @if (profileBusy()) {
+            <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          }
+          Profil speichern
+        </button>
+      </form>
+    </div>
+  }
+
+  <div class="card-soft p-6 space-y-3">
+    <p class="section-label">Erscheinungsbild</p>
+    <div class="grid grid-cols-3 gap-2">
+      @for (opt of themeOptions; track opt.value) {
+        <button type="button" (click)="setTheme(opt.value)" class="pill"
+                [class.pill-active]="theme.mode() === opt.value"
+                [class.pill-inactive]="theme.mode() !== opt.value"
+                style="justify-content: center;">{{ opt.label }}</button>
+      }
+    </div>
+  </div>
+
+  <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="card-soft p-6 space-y-4">
+    <p class="section-label">Passwort ändern</p>
+    <div class="space-y-1">
+      <label class="text-xs text-ink-muted">Aktuelles Passwort</label>
+      <input type="password" autocomplete="current-password" formControlName="currentPassword" class="input-underline" />
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs text-ink-muted">Neues Passwort</label>
+      <input type="password" autocomplete="new-password" formControlName="newPassword" placeholder="Mindestens 8 Zeichen" class="input-underline" />
+    </div>
+    <button type="submit" [disabled]="passwordBusy()" class="btn-primary w-full">
+      @if (passwordBusy()) {
+        <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      }
+      Passwort ändern
+    </button>
+    <p class="text-xs text-ink-muted">Nach dem Ändern wirst du neu angemeldet.</p>
+  </form>
+
+  <div class="card-soft p-6 space-y-3">
+    <p class="section-label">Zwei-Faktor-Authentifizierung</p>
+    @if (totpEnabled()) {
+      <p class="text-sm text-ink-soft flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600 dark:text-emerald-400">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Aktiv. Beim Login wird ein Code aus deiner Authenticator-App verlangt.
+      </p>
+      <button type="button" (click)="openTotpDisable()" class="btn-ghost w-full text-danger">2FA deaktivieren</button>
+    } @else {
+      <p class="text-sm text-ink-muted">Schütze dein Konto mit einer zusätzlichen Code-Abfrage beim Login (z.B. Google Authenticator).</p>
+      <button type="button" (click)="openTotpSetup()" [disabled]="totpBusy()" class="btn-primary w-full">
+        @if (totpBusy()) {
+          <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        }
+        2FA einrichten
+      </button>
+    }
+  </div>
+
+  @if (isAdmin()) {
+    <div class="card-soft p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <p class="section-label">Admin · Ollama-Queue</p>
+        <button type="button" (click)="ollamaPolling() ? stopOllamaPoll() : startOllamaPoll()" class="btn-link text-xs">
+          {{ ollamaPolling() ? 'Stop' : 'Live' }}
+        </button>
+      </div>
+      <button type="button" (click)="refreshOllamaQueue()" class="btn-ghost w-full text-sm">Aktualisieren</button>
+      <button type="button" (click)="cancelAllOllama()" [disabled]="cancelAllBusy()" class="btn-ghost w-full text-sm text-danger">
+        @if (cancelAllBusy()) {
+          <svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        }
+        Alle abbrechen + Models entladen
+      </button>
+      @if (ollamaQueueError(); as err) {
+        <p class="text-xs text-danger">{{ err }}</p>
+      }
+      @if (ollamaQueue().length === 0) {
+        <p class="text-sm text-ink-muted text-center py-2">Queue leer · keine Inferenz aktiv</p>
+      } @else {
+        <div class="space-y-2">
+          @for (e of ollamaQueue(); track e.id) {
+            <div class="flex items-center gap-3 p-3 rounded-lg bg-page">
+              <div class="shrink-0">
+                @if (e.status === 'running') {
+                  <svg class="animate-spin text-accent" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                } @else if (e.status === 'cancelled') {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-danger"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                } @else {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ink-muted"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                }
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-ink truncate">{{ e.tag }}</p>
+                @if (e.stage) {
+                  <p class="text-xs text-accent truncate">{{ e.stage }}</p>
+                }
+                <p class="text-xs text-ink-muted truncate">{{ e.model }}</p>
+              </div>
+              <div class="text-xs text-ink-muted text-right shrink-0">
+                @if (e.status === 'running' && e.startedAt) {
+                  <p>läuft</p>
+                  <p class="font-mono">{{ formatDuration(ollamaQueueNow() - e.startedAt) }}</p>
+                  @if (etaLabel(e); as eta) {
+                    <p class="font-mono text-accent">{{ eta }}</p>
+                  }
+                } @else if (e.status === 'cancelled') {
+                  <p class="text-danger">abgebrochen</p>
+                } @else {
+                  <p>wartet</p>
+                  <p class="font-mono">{{ formatDuration(ollamaQueueNow() - e.enqueuedAt) }}</p>
+                  @if (etaLabel(e); as eta) {
+                    <p class="font-mono text-accent">eta {{ eta }}</p>
+                  }
+                }
+              </div>
+              @if (e.status !== 'cancelled') {
+                <button type="button" (click)="cancelOllamaEntry(e.id)" class="icon-btn-mini shrink-0" aria-label="Abbrechen">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="card-soft p-6 space-y-3">
+    <p class="section-label">Sitzung</p>
+    <button type="button" (click)="logout()" class="btn-ghost w-full">Abmelden</button>
+  </div>
+
+  <div class="card-soft p-6 space-y-3">
+    <p class="section-label" class="text-danger">Konto löschen</p>
+    <p class="text-sm text-ink-muted">Alle Rezepte, Ideen und Weine werden unwiderruflich entfernt.</p>
+    <button type="button" (click)="openDelete()" class="btn-ghost w-full" class="text-danger">Konto endgültig löschen</button>
+  </div>
+
+  <p class="text-xs text-ink-muted text-center pt-2 px-4">
+    Kalorienberechnung basiert auf dem Bundeslebensmittelschlüssel (BLS), Version 4.0,
+    bereitgestellt vom Max Rubner-Institut unter
+    <a href="https://creativecommons.org/licenses/by/4.0/deed.de" target="_blank" rel="noopener" class="text-accent underline">CC BY 4.0</a>.
+    Produktdaten beim Barcode-Scan stammen von
+    <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" class="text-accent underline">Open Food Facts</a>
+    unter <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener" class="text-accent underline">ODbL</a>.
+  </p>
+</div>
+
+@if (showDeleteModal()) {
+  <div class="modal-backdrop modal-backdrop--center" (click)="cancelDelete()">
+    <div class="modal-sheet modal-sheet--center text-center" (click)="$event.stopPropagation()">
+      <h3 class="text-lg font-bold text-ink">Konto wirklich löschen?</h3>
+      <p class="text-ink-muted text-sm mt-2 mb-6">Alle deine Daten werden gelöscht. Das kann nicht rückgängig gemacht werden.</p>
+      <div class="flex gap-3">
+        <button type="button" (click)="cancelDelete()" class="btn-ghost flex-1" [disabled]="deleteBusy()">Abbrechen</button>
+        <button type="button" (click)="confirmDelete()" class="btn-danger flex-1" [disabled]="deleteBusy()">Löschen</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (totpSetupOpen()) {
+  <div class="modal-backdrop" (click)="closeTotpSetup()">
+    <div class="modal-sheet space-y-4 max-w-md" (click)="$event.stopPropagation()">
+      @if (!totpRecoveryCodes()) {
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-ink">2FA einrichten</h3>
+          <button type="button" (click)="closeTotpSetup()" class="icon-btn-mini" aria-label="Schließen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <ol class="list-decimal list-inside text-sm text-ink-soft space-y-1">
+          <li>Öffne Google Authenticator, Authy oder eine ähnliche App.</li>
+          <li>Scanne den QR-Code unten — oder gib den Schlüssel manuell ein.</li>
+          <li>Gib den 6-stelligen Code ein, den die App zeigt.</li>
+        </ol>
+        @if (totpQrUrl(); as url) {
+          <div class="flex justify-center">
+            <img [src]="url" alt="QR-Code" class="bg-white p-2 rounded-lg" width="220" height="220" />
+          </div>
+        }
+        @if (totpSecret(); as secret) {
+          <div class="text-center space-y-2">
+            <p class="text-xs text-ink-muted">Manueller Schlüssel:</p>
+            <div class="flex items-center justify-center gap-2">
+              <code class="text-xs font-mono text-ink select-all break-all flex-1 text-left">{{ secret }}</code>
+              <button type="button" (click)="copySecret(secret)" class="icon-btn-mini" aria-label="Kopieren">
+                @if (secretCopied()) {
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600 dark:text-emerald-400"><polyline points="20 6 9 17 4 12"/></svg>
+                } @else {
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                }
+              </button>
+            </div>
+          </div>
+        }
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Code aus der App</label>
+          <input type="text" inputmode="numeric" autocomplete="one-time-code"
+                 [value]="totpCode()" (input)="totpCode.set($any($event.target).value)"
+                 placeholder="123456" maxlength="6"
+                 class="input-underline text-center text-2xl tracking-widest font-mono" />
+        </div>
+        <button type="button" (click)="confirmTotpEnable()" [disabled]="totpBusy()" class="btn-primary w-full">
+          @if (totpBusy()) {
+            <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          }
+          Aktivieren
+        </button>
+      } @else {
+        <div class="text-center space-y-2">
+          <h3 class="text-lg font-bold text-ink">2FA aktiv ✓</h3>
+          <p class="text-sm text-ink-soft">Speichere diese Recovery-Codes an einem sicheren Ort. Jeder Code funktioniert einmal — falls du den Authenticator verlierst.</p>
+        </div>
+        <div class="card-soft p-4 grid grid-cols-2 gap-2">
+          @for (code of totpRecoveryCodes()!; track code) {
+            <code class="text-sm font-mono text-ink select-all text-center">{{ code }}</code>
+          }
+        </div>
+        <p class="text-xs text-ink-muted text-center">Diese Codes werden NICHT erneut angezeigt.</p>
+        <button type="button" (click)="closeTotpSetup()" class="btn-primary w-full">Verstanden</button>
+      }
+    </div>
+  </div>
+}
+
+@if (totpDisableOpen()) {
+  <div class="modal-backdrop" (click)="cancelTotpDisable()">
+    <div class="modal-sheet space-y-4" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-ink">2FA deaktivieren?</h3>
+        <button type="button" (click)="cancelTotpDisable()" class="icon-btn-mini" aria-label="Schließen">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="text-sm text-ink-soft">Bestätige mit deinem Passwort.</p>
+      <input type="password" autocomplete="current-password"
+             [value]="totpDisablePassword()" (input)="totpDisablePassword.set($any($event.target).value)"
+             placeholder="Passwort" class="input-underline" />
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" (click)="cancelTotpDisable()" [disabled]="totpBusy()" class="btn-ghost">Abbrechen</button>
+        <button type="button" (click)="confirmTotpDisable()" [disabled]="totpBusy()" class="btn-danger">Deaktivieren</button>
+      </div>
+    </div>
+  </div>
+}

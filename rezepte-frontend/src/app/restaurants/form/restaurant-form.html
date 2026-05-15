@@ -1,0 +1,118 @@
+<div class="space-y-4 pb-4">
+  <h2 class="text-center text-base font-bold text-ink py-2 border-b border-divider">
+    {{ id() ? 'Restaurant bearbeiten' : 'Neues Restaurant' }}
+  </h2>
+
+  <div class="space-y-2">
+    <p class="text-xs text-ink-muted px-1">Foto vom Restaurant oder Gericht (optional).</p>
+    @if (imagePath(); as path) {
+      <div class="relative rounded-3xl overflow-hidden aspect-[3/4]">
+        <img loading="lazy" decoding="async" [src]="imageUrl(path)" alt="Restaurant" class="w-full h-full object-cover" />
+        <button type="button" (click)="removeImage()"
+                class="absolute top-2 right-2 w-8 h-8 rounded-full bg-card/95 flex items-center justify-center text-ink-soft hover:text-danger"
+                aria-label="Bild entfernen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    } @else {
+      <label class="block rounded-3xl border-2 border-dashed border-divider aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent-softer transition-colors">
+        @if (isUploading()) {
+          <svg class="animate-spin text-accent" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        } @else {
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          <p class="text-xs text-ink-muted mt-2 px-2 text-center">Bild auswählen</p>
+        }
+        <input autocomplete="off" type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelect($event)" class="hidden" [disabled]="isUploading()" />
+      </label>
+    }
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4">
+    <div class="card-soft p-6 space-y-4">
+      <div class="space-y-1">
+        <label class="section-label">Name *</label>
+        <input autocomplete="off" type="text" formControlName="name" placeholder="z.B. Da Vinci" class="input-underline" />
+      </div>
+
+      <div class="space-y-1">
+        <label class="section-label">Küche</label>
+        <input autocomplete="off" type="text" formControlName="cuisine" placeholder="Italienisch, Sushi, Burger…" class="input-underline" />
+      </div>
+
+      <div class="space-y-2">
+        <label class="section-label">Bewertung</label>
+        <div class="grid grid-cols-2 gap-2">
+          @for (r of ratings; track r) {
+            <button type="button" (click)="setRating(r)" class="pill"
+                    [class.pill-active]="form.controls.rating.value === r"
+                    [class.pill-inactive]="form.controls.rating.value !== r"
+                    style="justify-content: center;">{{ ratingLabels[r] }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="section-label">Preisniveau</label>
+        <div class="grid grid-cols-4 gap-2">
+          @for (p of [1, 2, 3, 4]; track p) {
+            <button type="button" (click)="setPrice(p)" class="pill"
+                    [class.pill-active]="form.controls.priceLevel.value === p"
+                    [class.pill-inactive]="form.controls.priceLevel.value !== p"
+                    style="justify-content: center;">{{ '€'.repeat(p) }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <label class="section-label">Notiz</label>
+        <textarea formControlName="notes" rows="3"
+                  placeholder="Beste Pizza der Stadt, freundlicher Service…"
+                  class="input-underline resize-none"></textarea>
+      </div>
+    </div>
+
+    <div class="card-soft p-6 space-y-3">
+      <label class="section-label">Tags</label>
+      <div class="flex flex-wrap gap-2">
+        @for (tag of tags(); track tag) {
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent-softer text-accent text-sm">
+            {{ tag }}
+            <button type="button" (click)="removeTag(tag)" class="hover:bg-accent-soft rounded-full p-0.5" aria-label="Tag entfernen">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+        }
+        <input autocomplete="off" type="text" [value]="tagInput()" (input)="onTagInput($event)" (keydown)="onTagKeydown($event)" (blur)="commitTag()"
+               placeholder="Tag + Enter" class="input-underline flex-1 min-w-32" />
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="floating-action-pill">
+  <button type="button" (click)="cancel()" class="pill-icon-only" aria-label="Abbrechen" title="Abbrechen">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  </button>
+  <span class="pill-divider"></span>
+  <button type="button" (click)="save()" class="pill-primary">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+    Speichern
+  </button>
+</div>

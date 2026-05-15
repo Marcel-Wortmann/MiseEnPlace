@@ -1,0 +1,11 @@
+<div class="min-h-screen flex flex-col" appSwipe (swipeLeft)="onSwipeLeft()" (swipeRight)="onSwipeRight()">
+  <app-offline-banner />
+  @if (showHeader()) {
+    <app-header />
+  }
+  <main class="flex-1" [class.px-4]="!isPublic()" [class.pb-32]="!isPublic() && !isAuthPage()" [class.pt-4]="!isPublic()" [class.max-w-3xl]="!isPublic()" [class.w-full]="!isPublic()" [class.mx-auto]="!isPublic()">
+    <router-outlet />
+  </main>
+  <app-notification />
+  <app-lightbox />
+</div>

@@ -1,0 +1,91 @@
+@if (loading()) {
+  <div class="space-y-4 animate-pulse">
+    <div class="w-full h-64 bg-page rounded-3xl"></div>
+    <div class="card-soft p-6 space-y-3">
+      <div class="h-7 bg-page rounded w-3/4"></div>
+      <div class="h-5 bg-page rounded w-1/2"></div>
+      <div class="h-4 bg-page rounded w-2/3"></div>
+    </div>
+  </div>
+} @else if (restaurant(); as r) {
+  <div class="space-y-4">
+    @if (imageUrl(r.imagePath); as url) {
+      <div class="relative rounded-3xl overflow-hidden">
+        <img loading="lazy" decoding="async" [src]="url" [alt]="r.name" class="w-full h-64 object-cover" />
+        <button type="button" class="image-zoom-btn" (click)="lightbox.open(imageOriginal(r.imagePath)!, r.name)" aria-label="Bild vergrößern">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
+      </div>
+    }
+
+    <div class="card-soft p-6 space-y-3">
+      <div>
+        <h1 class="text-2xl font-bold text-ink leading-tight">{{ r.name }}</h1>
+        @if (r.cuisine) { <p class="text-sm text-ink-muted mt-1">{{ r.cuisine }}</p> }
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        @if (r.rating) {
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-accent text-page text-sm font-medium">
+            {{ ratingLabel(r.rating) }} ★
+          </span>
+        }
+        @if (r.priceLevel) {
+          <span class="text-ink-soft text-sm">{{ priceDisplay(r.priceLevel) }}</span>
+        }
+      </div>
+
+      @if (r.tags.length > 0) {
+        <div class="flex flex-wrap gap-2 pt-2 border-t border-divider">
+          @for (tag of r.tags; track tag) {
+            <span class="px-2.5 py-1 rounded-full bg-accent-soft text-accent text-xs">{{ tag }}</span>
+          }
+        </div>
+      }
+
+      @if (r.notes) {
+        <div class="pt-2 border-t border-divider">
+          <p class="text-ink leading-relaxed whitespace-pre-line">{{ r.notes }}</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="floating-action-pill">
+    <button type="button" (click)="back()" class="pill-icon-only" aria-label="Zurück">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+      </svg>
+    </button>
+    <span class="pill-divider"></span>
+    <button type="button" (click)="openDelete()" class="pill-icon-only pill-danger" aria-label="Löschen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+    </button>
+    <span class="pill-divider"></span>
+    <button type="button" (click)="edit()" class="pill-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Bearbeiten
+    </button>
+  </div>
+
+  @if (showDeleteModal()) {
+    <div class="modal-backdrop" (click)="closeDelete()">
+      <div class="modal-sheet space-y-4" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-ink">Restaurant löschen?</h2>
+          <button type="button" (click)="closeDelete()" class="icon-btn-mini" aria-label="Schließen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <p class="text-ink-soft">"{{ r.name }}" wird unwiderruflich gelöscht.</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" (click)="closeDelete()" class="btn-ghost">Abbrechen</button>
+          <button type="button" (click)="confirmDelete()" class="btn-danger">Löschen</button>
+        </div>
+      </div>
+    </div>
+  }
+}

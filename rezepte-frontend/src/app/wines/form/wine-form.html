@@ -1,0 +1,185 @@
+<div class="space-y-4 pb-4">
+  <h2 class="text-center text-base font-bold text-ink py-2 border-b border-divider">
+    {{ isEditMode() ? 'Wein bearbeiten' : 'Neuer Wein' }}
+  </h2>
+
+  @if (!isEditMode()) {
+    <div class="card-soft p-4 flex items-start gap-3">
+      <div class="w-8 h-8 rounded-xl bg-accent-softer flex items-center justify-center shrink-0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a57c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+          <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+        </svg>
+      </div>
+      <p class="text-sm text-ink-soft">
+        Foto hochladen, Bewertung wählen, speichern. Die KI analysiert Etikett im Hintergrund — beim nächsten Aufruf siehst du Name, Jahrgang & Co.
+      </p>
+    </div>
+  }
+
+  <div class="space-y-2">
+    <p class="text-xs text-ink-muted px-1">Vorder- und/oder Rückseite — beide Bilder helfen der KI bei der Erkennung.</p>
+    <div class="grid grid-cols-2 gap-3">
+      <!-- Vorderseite -->
+      @if (imageUrl(); as url) {
+        <div class="relative rounded-3xl overflow-hidden aspect-[3/4]">
+          <img loading="eager" decoding="async" fetchpriority="high" [src]="url" alt="Vorderseite" class="w-full h-full object-cover" />
+          <span class="absolute top-2 left-2 text-xs bg-card/90 text-ink-soft font-semibold px-2 py-0.5 rounded-full">Vorderseite</span>
+          <button type="button" (click)="removeImage('front')"
+                  class="absolute top-2 right-2 w-8 h-8 rounded-full bg-card/95 flex items-center justify-center text-ink-soft hover:text-danger"
+                  aria-label="Vorderseite entfernen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      } @else {
+        <label class="block rounded-3xl border-2 border-dashed border-divider aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent-softer transition-colors">
+          @if (isUploading() === 'front') {
+            <svg class="animate-spin text-accent" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          } @else {
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <p class="text-xs text-ink-muted mt-2 px-2 text-center">Vorderseite</p>
+          }
+          <input autocomplete="off" type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event, 'front')" class="hidden" [disabled]="isUploading() !== null" />
+        </label>
+      }
+
+      <!-- Rückseite -->
+      @if (imageUrlBack(); as url) {
+        <div class="relative rounded-3xl overflow-hidden aspect-[3/4]">
+          <img loading="lazy" decoding="async" [src]="url" alt="Rückseite" class="w-full h-full object-cover" />
+          <span class="absolute top-2 left-2 text-xs bg-card/90 text-ink-soft font-semibold px-2 py-0.5 rounded-full">Rückseite</span>
+          <button type="button" (click)="removeImage('back')"
+                  class="absolute top-2 right-2 w-8 h-8 rounded-full bg-card/95 flex items-center justify-center text-ink-soft hover:text-danger"
+                  aria-label="Rückseite entfernen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      } @else {
+        <label class="block rounded-3xl border-2 border-dashed border-divider aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent-softer transition-colors">
+          @if (isUploading() === 'back') {
+            <svg class="animate-spin text-accent" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          } @else {
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <p class="text-xs text-ink-muted mt-2 px-2 text-center">Rückseite</p>
+          }
+          <input autocomplete="off" type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event, 'back')" class="hidden" [disabled]="isUploading() !== null" />
+        </label>
+      }
+    </div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submitForm()" class="space-y-4">
+    <div class="card-soft p-6 space-y-4">
+      <div class="space-y-2">
+        <label class="section-label">Bewertung</label>
+        <div class="grid grid-cols-2 gap-2">
+          @for (r of ratings; track r.value) {
+            <button type="button" (click)="setRating(r.value)" class="pill"
+                    [class.pill-active]="form.controls.rating.value === r.value"
+                    [class.pill-inactive]="form.controls.rating.value !== r.value"
+                    style="justify-content: center;">{{ r.label }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <label class="section-label">Notiz</label>
+        <textarea formControlName="notes" rows="3"
+                  placeholder="Was hat dir geschmeckt? Wozu passt der Wein?"
+                  class="input-underline resize-none"></textarea>
+      </div>
+    </div>
+
+    <div class="card-soft p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <label class="section-label">Wein-Details</label>
+        <span class="text-xs text-ink-muted">KI füllt automatisch</span>
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-xs text-ink-muted">Name</label>
+        <input autocomplete="off" type="text" formControlName="name" placeholder="z.B. Riesling Trocken" class="input-underline" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Jahrgang</label>
+          <input autocomplete="off" type="number" min="1800" max="2100" formControlName="vintage" placeholder="2021" class="input-underline" />
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Rebsorte</label>
+          <input autocomplete="off" type="text" formControlName="grape" placeholder="Riesling" class="input-underline" />
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-xs text-ink-muted">Weingut</label>
+        <input autocomplete="off" type="text" formControlName="winery" placeholder="z.B. Weingut Müller" class="input-underline" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Region</label>
+          <input autocomplete="off" type="text" formControlName="region" placeholder="Mosel" class="input-underline" />
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Land</label>
+          <input autocomplete="off" type="text" formControlName="country" placeholder="Deutschland" class="input-underline" />
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-xs text-ink-muted">Typ</label>
+        <div class="flex flex-wrap gap-2">
+          @for (t of types; track t.value) {
+            <button type="button" (click)="setWineType(t.value)" class="pill"
+                    [class.pill-active]="form.controls.wineType.value === t.value"
+                    [class.pill-inactive]="form.controls.wineType.value !== t.value">
+              {{ t.label }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="floating-action-pill">
+  <button type="button" (click)="cancel()" class="pill-icon-only" aria-label="Abbrechen" title="Abbrechen">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  </button>
+  <span class="pill-divider"></span>
+  <button type="button" (click)="submitForm()" [disabled]="isLoading()" class="pill-primary">
+    @if (isLoading()) {
+      <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    } @else {
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    }
+    Speichern
+  </button>
+</div>

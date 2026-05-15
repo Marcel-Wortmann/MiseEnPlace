@@ -1,0 +1,130 @@
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-2xl font-bold text-ink">Einkaufsliste</h2>
+    @if (store.totalCount() > 0) {
+      <div class="flex gap-2">
+        <button type="button" (click)="copyAsText()" class="icon-btn-mini" aria-label="Kopieren" title="Als Text kopieren">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        <button type="button" (click)="share()" class="icon-btn-mini" aria-label="Teilen" title="Teilen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+        <button type="button" (click)="showClearAllConfirm.set(true)" class="icon-btn-mini danger" aria-label="Alles leeren" title="Alles leeren">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Manual add -->
+  <div class="card-soft p-4 space-y-3">
+    <h3 class="section-label">Manuell hinzufügen</h3>
+    <div class="flex gap-2 flex-wrap">
+      <input autocomplete="off" type="text" [ngModel]="newName()" (ngModelChange)="newName.set($event)"
+             placeholder="Zutat" class="flex-1 min-w-[120px]" style="border: 0; border-bottom: 1px solid var(--color-divider); background: transparent; padding: 0.5rem 0; color: var(--color-ink);" />
+      <input autocomplete="off" type="number" [ngModel]="newAmount()" (ngModelChange)="newAmount.set($event)"
+             placeholder="Menge" style="width: 80px; border: 0; border-bottom: 1px solid var(--color-divider); background: transparent; padding: 0.5rem 0; color: var(--color-ink);" />
+      <input autocomplete="off" type="text" [ngModel]="newUnit()" (ngModelChange)="newUnit.set($event)"
+             placeholder="Einheit" style="width: 80px; border: 0; border-bottom: 1px solid var(--color-divider); background: transparent; padding: 0.5rem 0; color: var(--color-ink);" />
+      <button type="button" (click)="addManual()" [disabled]="!newName().trim()" class="btn-primary">+</button>
+    </div>
+  </div>
+
+  @if (store.loading()) {
+    <div class="card-soft p-6 text-center">
+      <svg class="animate-spin mx-auto text-accent" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+    </div>
+  } @else if (store.totalCount() === 0) {
+    <div class="card-soft p-6 text-center text-ink-soft">
+      <p>Noch nichts auf der Einkaufsliste.</p>
+      <p class="text-sm text-ink-muted mt-2">Aus einem <a routerLink="/rezepte" class="text-accent">Rezept</a> hinzufügen oder oben manuell eintragen.</p>
+    </div>
+  } @else {
+    <!-- Pending -->
+    @if (store.pending().length > 0) {
+      <ul class="space-y-2">
+        @for (item of store.pending(); track item.id) {
+          <li class="card-soft p-4 flex items-center gap-3">
+            <button type="button" (click)="store.toggleDone(item.id)" aria-label="Erledigt"
+                    style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--color-divider); flex-shrink: 0; cursor: pointer; background: transparent;"></button>
+            <div class="flex-1 min-w-0">
+              <p class="text-ink">
+                @if (item.amount !== null) { <span class="font-semibold">{{ item.amount }}</span> }
+                @if (item.unit) { <span class="text-ink-muted">{{ item.unit }}</span> }
+                {{ item.name }}
+              </p>
+              @if (item.sourceRecipeTitle) {
+                <p class="text-xs text-ink-muted mt-0.5">aus {{ item.sourceRecipeTitle }}</p>
+              }
+            </div>
+            <button type="button" (click)="store.remove(item.id)" class="icon-btn-mini danger shrink-0" aria-label="Entfernen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- Done -->
+    @if (store.done().length > 0) {
+      <details class="card-soft">
+        <summary class="p-4 cursor-pointer flex items-center justify-between">
+          <span class="section-label">Erledigt ({{ store.done().length }})</span>
+          <button type="button" (click)="store.clearDone(); $event.preventDefault();" class="text-xs text-accent">Entfernen</button>
+        </summary>
+        <ul class="space-y-2 px-4 pb-4 border-t border-divider pt-3">
+          @for (item of store.done(); track item.id) {
+            <li class="flex items-center gap-3">
+              <button type="button" (click)="store.toggleDone(item.id)" aria-label="Wiederherstellen"
+                      style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--color-accent); background: var(--color-accent); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--color-page);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+              <span class="flex-1 line-through text-ink-muted">{{ item.name }}</span>
+              <button type="button" (click)="store.remove(item.id)" class="icon-btn-mini" aria-label="Entfernen">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </li>
+          }
+        </ul>
+      </details>
+    }
+  }
+</div>
+
+@if (showClearAllConfirm()) {
+  <div class="modal-backdrop" (click)="showClearAllConfirm.set(false)">
+    <div class="modal-sheet space-y-5" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-ink">Liste komplett leeren?</h3>
+        <button type="button" (click)="showClearAllConfirm.set(false)" class="icon-btn-mini" aria-label="Schließen">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <p class="text-ink-soft">Alle Einträge werden unwiderruflich entfernt.</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" (click)="showClearAllConfirm.set(false)" class="btn-ghost">Abbrechen</button>
+        <button type="button" (click)="confirmClearAll()" class="btn-danger">Alles leeren</button>
+      </div>
+    </div>
+  </div>
+}

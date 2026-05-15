@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String?  @unique
+  passwordHash String
+  displayName  String?
+  totpSecret   String?
+  totpEnabled  Boolean  @default(false)
+  totpRecoveryCodes String[] @default([])
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recipes      Recipe[]
+  ideas        RecipeIdea[]
+  wines        Wine[]
+  refreshTokens RefreshToken[]
+
+  recipeShares RecipeShare[]
+  ideaShares   RecipeIdeaShare[]
+  wineShares   WineShare[]
+
+  ingredients  UserIngredient[]
+  shoppingItems ShoppingListItem[]
+  syncQueue   SyncQueueItem[]
+  restaurants Restaurant[]
+  mealPlanEntries MealPlanEntry[]
+  following Follow[] @relation("follower")
+  followers Follow[] @relation("following")
+  recipeFollows RecipeFollow[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Recipe {
+  id                  String   @id @default(uuid())
+  userId              String
+  title               String
+  description         String?
+  personalNotes       String?
+  imagePath           String?
+  durationMinutes     Int?
+  difficulty          String?
+  rating              Int?
+  servings            Int?
+  caloriesPerServing  Int?
+  proteinPerServing   Float?
+  carbsPerServing     Float?
+  fatPerServing       Float?
+  isFavorite          Boolean  @default(false)
+  isPrivate           Boolean  @default(false)
+  tags                String[] @default([])
+  ingredients         Json     @default("[]")
+  steps               Json     @default("[]")
+  analysisStatus      String?
+  analysisError       String?
+  shareToken          String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares              RecipeShare[]
+  mealPlanEntries     MealPlanEntry[]
+  followers           RecipeFollow[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([rating])
+  @@index([durationMinutes])
+  @@index([isFavorite])
+  @@index([isPrivate])
+}
+
+model RecipeIdea {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String?
+  note      String?
+  imagePath String?
+  shareToken String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares    RecipeIdeaShare[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Wine {
+  id              String   @id @default(uuid())
+  userId          String
+  imagePath       String
+  imagePathBack   String?
+  rating          String?
+  notes           String?
+  analysisStatus  String   @default("pending")
+  analysisError   String?
+
+  name            String?
+  vintage         Int?
+  region          String?
+  country         String?
+  grape           String?
+  winery          String?
+  wineType        String?
+  description     String?
+  tastingNotes    String?
+  needsReview     Boolean  @default(false)
+
+  shareToken      String?  @unique
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares          WineShare[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([rating])
+  @@index([wineType])
+}
+
+model RecipeShare {
+  id        String   @id @default(uuid())
+  recipeId  String
+  userId    String
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId])
+  @@index([userId])
+}
+
+model RecipeIdeaShare {
+  id        String     @id @default(uuid())
+  ideaId    String
+  userId    String
+  createdAt DateTime   @default(now())
+  idea      RecipeIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ideaId, userId])
+  @@index([userId])
+}
+
+model WineShare {
+  id        String   @id @default(uuid())
+  wineId    String
+  userId    String
+  createdAt DateTime @default(now())
+  wine      Wine     @relation(fields: [wineId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([wineId, userId])
+  @@index([userId])
+}
+
+/// Bundeslebensmittelschlüssel (BLS), Version 4.0 — Max Rubner-Institut.
+/// CC BY 4.0. Imported once at backend boot from /app/data/bls.csv if present.
+model Bls {
+  /// 7-stelliger BLS-Code, z.B. "C131000" (Hafer ganzes Korn, roh)
+  code           String  @id
+  /// Deutsche Lebensmittelbezeichnung
+  name           String
+  /// Englische Bezeichnung (optional)
+  nameEn         String?
+  /// Kalorien pro 100g essbarem Anteil
+  kcalPer100g    Float
+  /// Protein g pro 100g (PROT625)
+  proteinPer100g Float?
+  /// Kohlenhydrate verfügbar g pro 100g (CHO)
+  carbsPer100g   Float?
+  /// Fett g pro 100g (FAT)
+  fatPer100g     Float?
+  /// Ballaststoffe g pro 100g (FIBT)
+  fiberPer100g   Float?
+  /// Lowercase, ohne Diakritika — fürs schnelle Suchen
+  searchKey      String
+
+  @@index([searchKey])
+  @@index([name])
+}
+
+/// Persönliche Zutaten des Users — überschreiben BLS-Werte.
+/// Beim Berechnen wird per Substring-Match auf `name` und `aliases` geprüft.
+model UserIngredient {
+  id                  String   @id @default(uuid())
+  userId              String
+  /// z.B. "Sahne" — Substring-Match: matcht jede Rezeptzutat, die diesen Begriff enthält
+  name                String
+  /// Komma-separierte Alias-Begriffe; jeder einzelne wird ebenfalls per Substring matched
+  aliases             String[] @default([])
+  /// Kalorien pro 100g
+  kcalPer100g         Float
+  /// Protein g pro 100g (optional — fällt sonst auf BLS/LLM zurück)
+  proteinPer100g      Float?
+  /// Kohlenhydrate g pro 100g (optional)
+  carbsPer100g        Float?
+  /// Fett g pro 100g (optional)
+  fatPer100g          Float?
+  /// Optional: wie viele Gramm ist 1 Stück (z.B. "1 Zwiebel = 130g")
+  defaultGramsPerPiece Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Einkaufsliste — pro User
+model ShoppingListItem {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  amount      Float?
+  unit        String?
+  /// Quell-Rezept (optional, für Anzeige "aus Rezept X")
+  sourceRecipeId   String?
+  sourceRecipeTitle String?
+  /// Manuelles Markieren als erledigt (durchgestrichen)
+  done        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([done])
+}
+
+/// Offline-Queue: Mutationen die offline gestartet wurden, werden hier vom Frontend persistiert
+/// (IndexedDB). Diese Tabelle dient als Server-side Verifikation/Logging optional.
+/// Hauptlogik liegt im Frontend (siehe sync.service.ts).
+model SyncQueueItem {
+  id           String   @id @default(uuid())
+  userId       String
+  /// 'recipe.create' | 'recipe.update' | 'recipe.delete' | 'idea.*' | 'wine.*' | 'shopping.*'
+  operation    String
+  /// JSON payload der Mutation
+  payload      Json
+  /// Offline-Client-Timestamp
+  clientCreatedAt DateTime
+  /// Server-Verarbeitungs-Timestamp
+  appliedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Restaurant {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  cuisine     String?
+  rating      String?
+  priceLevel  Int?
+  imagePath   String?
+  notes       String?
+  tags        String[] @default([])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([rating])
+}
+
+model MealPlanEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime @db.Date
+  slot      String   // 'fruehstueck' | 'mittag' | 'abend'
+  recipeId  String?
+  customText String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, date, slot])
+  @@index([userId, date])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model RecipeFollow {
+  id        String   @id @default(uuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}

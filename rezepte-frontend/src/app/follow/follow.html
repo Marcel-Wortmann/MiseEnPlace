@@ -1,0 +1,167 @@
+<div class="space-y-4">
+  <div class="flex items-center gap-6">
+    <button type="button" (click)="view.set('feed')" class="tab-link"
+            [class.tab-active]="view() === 'feed'" [class.tab-inactive]="view() !== 'feed'">Feed</button>
+    <button type="button" (click)="view.set('manage')" class="tab-link"
+            [class.tab-active]="view() === 'manage'" [class.tab-inactive]="view() !== 'manage'">Gefolgte Benutzer</button>
+  </div>
+
+  @if (view() === 'feed') {
+    <div class="card-soft p-4 space-y-3">
+      <div class="space-y-1">
+        <label class="text-xs text-ink-muted">Suche</label>
+        <input autocomplete="off" type="text" placeholder="Titel, Beschreibung, Tag…"
+               [value]="feedSearch()" (input)="feedSearch.set($any($event.target).value)"
+               class="input-underline w-full" />
+      </div>
+
+      @if (store.following().length > 0) {
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Person</label>
+          <select [value]="feedUserId() ?? ''" (change)="feedUserId.set($any($event.target).value || null)" class="input-underline w-full">
+            <option value="">Alle</option>
+            @for (u of store.following(); track u.id) {
+              <option [value]="u.id">{{ u.displayName ?? u.username ?? u.email }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      @if (feedTags().length > 0) {
+        <div class="space-y-1">
+          <label class="text-xs text-ink-muted">Tag</label>
+          <div class="flex flex-wrap gap-2">
+            @for (t of feedTags(); track t) {
+              <button type="button" (click)="feedTag.set(feedTag() === t ? null : t)"
+                      class="pill" [class.pill-active]="feedTag() === t" [class.pill-inactive]="feedTag() !== t">
+                {{ t }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (hasFeedFilter()) {
+        <button type="button" (click)="clearFeedFilters()" class="btn-link text-sm">Filter zurücksetzen</button>
+      }
+    </div>
+
+    @if (store.loading()) {
+      <div class="space-y-3">
+        @for (i of [1,2]; track i) {
+          <div class="card-soft p-4 animate-pulse">
+            <div class="h-44 bg-page rounded-2xl mb-3"></div>
+            <div class="h-5 bg-page rounded w-3/4 mb-2"></div>
+            <div class="h-4 bg-page rounded w-1/2"></div>
+          </div>
+        }
+      </div>
+    } @else if (filteredFeed().length === 0) {
+      <div class="text-center py-20 px-6">
+        @if (hasFeedFilter()) {
+          <p class="text-ink-muted text-lg">Keine Treffer.</p>
+          <button type="button" (click)="clearFeedFilters()" class="btn-link inline-block mt-4">Filter zurücksetzen</button>
+        } @else {
+          <p class="text-ink-muted text-lg">Noch keine Rezepte im Feed.</p>
+          <button type="button" (click)="view.set('manage')" class="btn-link inline-block mt-4">Personen suchen</button>
+        }
+      </div>
+    } @else {
+      <div class="space-y-3">
+        @for (recipe of filteredFeed(); track recipe.id) {
+          <div class="card-soft list-card p-0 block overflow-hidden relative">
+            <a [routerLink]="['/rezepte', recipe.id]" class="block">
+              @if (imageUrl(recipe.imagePath); as url) {
+                <img loading="lazy" decoding="async" [src]="url" [alt]="recipe.title" width="800" height="352" class="w-full h-44 object-cover" />
+              }
+              <div class="p-4 space-y-2">
+                <div class="flex items-start gap-2">
+                  <h3 class="text-lg font-semibold text-ink line-clamp-2 pr-10 flex-1">{{ recipe.title }}</h3>
+                  @if (isNew(recipe.createdAt)) {
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent text-page shrink-0 mt-1">Neu</span>
+                  }
+                </div>
+                @if (recipe.sharedFrom) {
+                  <p class="text-xs text-ink-muted">
+                    Von {{ recipe.sharedFrom.displayName ?? recipe.sharedFrom.email }}
+                  </p>
+                }
+                @if (recipe.description) {
+                  <p class="text-sm text-ink-soft line-clamp-2">{{ recipe.description }}</p>
+                }
+              </div>
+            </a>
+            <button type="button" (click)="toggleRecipeFollow(recipe)" class="icon-btn-mini absolute top-3 right-3 bg-card/90" [attr.aria-label]="recipe.isFollowed ? 'Nicht mehr folgen' : 'Rezept folgen'">
+              <svg width="20" height="20" viewBox="0 0 24 24" [attr.fill]="recipe.isFollowed ? 'var(--color-accent)' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.color]="recipe.isFollowed ? 'var(--color-accent)' : 'var(--color-ink)'">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
+              </svg>
+            </button>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <div class="space-y-3">
+      <div class="card-soft p-6 space-y-3">
+        <p class="section-label">Personen suchen</p>
+        <div class="space-y-1 relative">
+          <label class="text-xs text-ink-muted">E-Mail oder Benutzername</label>
+          <input autocomplete="off" type="text" placeholder="suchen…"
+                 [value]="searchQuery()" (input)="onSearchInput($any($event.target).value)"
+                 class="input-underline w-full" />
+          @if (searchQuery()) {
+            <button type="button" (click)="clearSearch()" class="absolute right-0 top-7 text-ink-muted">×</button>
+          }
+        </div>
+      </div>
+
+      @if (store.searchResults().length > 0) {
+        <div class="space-y-2">
+          <p class="section-label">Suchergebnisse</p>
+          @for (u of store.searchResults(); track u.id) {
+            <div class="card-soft p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-accent text-page font-bold flex items-center justify-center shrink-0">
+                {{ userInitial(u) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-ink font-medium truncate">{{ u.displayName ?? u.username ?? u.email }}</p>
+                <p class="text-xs text-ink-muted truncate">
+                  @if (u.username) { &#64;{{ u.username }} · }
+                  {{ u.publicRecipeCount }} Rezepte · {{ u.followerCount }} Follower
+                </p>
+              </div>
+              @if (u.isFollowing) {
+                <button type="button" (click)="store.unfollow(u)" class="btn-ghost text-sm">Entfolgen</button>
+              } @else {
+                <button type="button" (click)="store.follow(u)" class="btn-primary text-sm">Folgen</button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <div class="space-y-2">
+        <p class="section-label">Du folgst</p>
+        @if (store.following().length === 0) {
+          <p class="text-ink-muted text-sm">Du folgst noch niemandem.</p>
+        } @else {
+          @for (u of store.following(); track u.id) {
+            <div class="card-soft p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-accent text-page font-bold flex items-center justify-center shrink-0">
+                {{ userInitial(u) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-ink font-medium truncate">{{ u.displayName ?? u.username ?? u.email }}</p>
+                <p class="text-xs text-ink-muted truncate">
+                  @if (u.username) { &#64;{{ u.username }} · }
+                  {{ u.publicRecipeCount }} Rezepte
+                </p>
+              </div>
+              <button type="button" (click)="store.unfollow(u)" class="btn-ghost text-sm">Entfolgen</button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

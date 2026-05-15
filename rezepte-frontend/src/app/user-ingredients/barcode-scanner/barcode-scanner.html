@@ -1,0 +1,62 @@
+<div class="modal-backdrop" (click)="cancel()">
+  <div class="modal-sheet !p-0 overflow-hidden flex flex-col" (click)="$event.stopPropagation()">
+    <div class="flex items-center justify-between p-4 border-b border-divider">
+      <h3 class="text-lg font-bold text-ink">Barcode scannen</h3>
+      <button type="button" (click)="cancel()" class="icon-btn-mini" aria-label="Schließen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    @if (status() === 'idle') {
+      <div class="p-8 text-center">
+        <svg class="animate-spin mx-auto text-accent mb-3" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+        <p class="text-ink-soft">Kamera wird vorbereitet…</p>
+      </div>
+    }
+
+    @if (status() === 'camera') {
+      <div class="relative bg-black aspect-square">
+        <video #video class="w-full h-full object-cover" playsinline muted autoplay></video>
+        <!-- Sucher-Overlay -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="w-3/4 h-1/3 border-2 border-accent rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]"></div>
+        </div>
+      </div>
+      <div class="p-4 space-y-3">
+        <p class="text-sm text-ink-muted text-center">Halte den Barcode in den Rahmen.</p>
+        <button type="button" (click)="switchToManual()" class="btn-ghost w-full">
+          Stattdessen manuell eingeben
+        </button>
+      </div>
+    }
+
+    @if (status() === 'manual' || status() === 'unsupported') {
+      <div class="p-6 space-y-4">
+        @if (status() === 'unsupported') {
+          <p class="text-sm text-ink-muted">Dein Browser unterstützt keinen automatischen Scan. Bitte Barcode-Nummer manuell eingeben (steht unter dem Strichcode auf der Verpackung).</p>
+        } @else {
+          <p class="text-sm text-ink-muted">Barcode-Nummer eingeben (steht unter dem Strichcode auf der Verpackung).</p>
+        }
+        <input autocomplete="off" type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               placeholder="z.B. 4002405123456"
+               [value]="manualInput()"
+               (input)="onManualInput($event)"
+               class="input-underline" />
+        @if (error(); as err) {
+          <p class="text-xs text-danger">{{ err }}</p>
+        }
+        <div class="flex gap-3">
+          <button type="button" (click)="cancel()" class="btn-ghost flex-1">Abbrechen</button>
+          <button type="button" (click)="submitManual()" class="btn-primary flex-1">Suchen</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

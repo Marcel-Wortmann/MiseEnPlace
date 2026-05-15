@@ -1,0 +1,76 @@
+<div class="min-h-screen px-4 py-6 max-w-3xl mx-auto">
+  @if (loading()) {
+    <div class="card-soft p-6 animate-pulse">
+      <div class="h-64 bg-page rounded-2xl"></div>
+    </div>
+  } @else if (notFound()) {
+    <div class="text-center py-20 px-6">
+      <p class="text-ink-muted text-lg">Geteilter Eintrag nicht gefunden oder Link widerrufen.</p>
+      <a routerLink="/" class="btn-link inline-block mt-4">Zur Startseite</a>
+    </div>
+  } @else if (recipe(); as r) {
+    <div class="space-y-4 pb-4">
+      <div class="text-xs text-ink-muted text-center">
+        Geteilt von {{ r.user?.displayName || r.user?.email || 'Unbekannt' }}
+      </div>
+
+      @if (imageSrc(); as src) {
+        <div class="rounded-3xl overflow-hidden">
+          <img loading="lazy" decoding="async" [src]="src" [alt]="r.title" class="w-full h-64 object-cover" />
+        </div>
+      }
+
+      <div class="card-soft p-6 space-y-3">
+        <h1 class="text-2xl font-bold text-ink">{{ r.title }}</h1>
+        @if (r.description) {
+          <p class="text-ink-soft leading-relaxed">{{ r.description }}</p>
+        }
+        <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-muted">
+          @if (r.durationMinutes) { <span>⏱ {{ r.durationMinutes }} Min</span> }
+          @if (r.servings) { <span>👥 {{ r.servings }} Portionen</span> }
+          @if (r.difficulty) { <span>{{ r.difficulty }}</span> }
+          @if (r.caloriesPerServing) { <span>⚡ {{ r.caloriesPerServing }} kcal</span> }
+        </div>
+        @if (r.tags.length) {
+          <div class="flex flex-wrap gap-2 pt-2">
+            @for (t of r.tags; track t) {
+              <span class="text-xs px-3 py-1 rounded-full bg-accent-softer text-accent font-semibold">{{ t }}</span>
+            }
+          </div>
+        }
+      </div>
+
+      @if (r.ingredients.length) {
+        <div class="card-soft p-6 space-y-3">
+          <p class="section-label">Zutaten</p>
+          <ul class="space-y-2">
+            @for (i of r.ingredients; track $index) {
+              <li class="flex gap-3 text-ink">
+                @if (i.amount || i.unit) {
+                  <span class="text-ink-muted shrink-0 min-w-16">
+                    {{ i.amount }} {{ i.unit }}
+                  </span>
+                }
+                <span>{{ i.name }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (r.steps.length) {
+        <div class="card-soft p-6 space-y-3">
+          <p class="section-label">Zubereitung</p>
+          <ol class="space-y-3">
+            @for (s of r.steps; track $index) {
+              <li class="flex gap-3">
+                <span class="w-7 h-7 rounded-full bg-accent-softer text-accent text-xs font-bold flex items-center justify-center shrink-0">{{ $index + 1 }}</span>
+                <p class="text-ink leading-relaxed">{{ s.text }}</p>
+              </li>
+            }
+          </ol>
+        </div>
+      }
+    </div>
+  }
+</div>

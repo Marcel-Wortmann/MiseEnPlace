@@ -1,0 +1,19 @@
+<div class="min-h-screen px-4 py-6 max-w-3xl mx-auto">
+  @if (loading()) {
+    <div class="card-soft p-6 animate-pulse"><div class="h-48 bg-page rounded-2xl"></div></div>
+  } @else if (notFound()) {
+    <div class="text-center py-20 px-6"><p class="text-ink-muted text-lg">Idee nicht gefunden.</p>
+      <a routerLink="/" class="btn-link inline-block mt-4">Zur Startseite</a></div>
+  } @else if (idea(); as i) {
+    <div class="space-y-4 pb-4">
+      <div class="text-xs text-ink-muted text-center">Geteilt von {{ i.user?.displayName || i.user?.email || 'Unbekannt' }}</div>
+      @if (imageSrc(); as src) {
+        <div class="rounded-3xl overflow-hidden"><img loading="lazy" decoding="async" [src]="src" [alt]="i.title || 'Idee'" class="w-full h-64 object-cover" /></div>
+      }
+      <div class="card-soft p-6 space-y-3">
+        @if (i.title) { <h1 class="text-2xl font-bold text-ink">{{ i.title }}</h1> }
+        @if (i.note) { <p class="text-ink-soft leading-relaxed whitespace-pre-line">{{ i.note }}</p> }
+      </div>
+    </div>
+  }
+</div>
